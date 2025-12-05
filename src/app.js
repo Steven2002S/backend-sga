@@ -50,16 +50,13 @@ app.use(
 app.use(compression());
 
 // Configuración de CORS dinámica
-const allowedOrigins = process.env.NODE_ENV === "production"
-  ? [
-    process.env.FRONTEND_URL,
-    // Agrega aquí otros dominios de frontend si los tienes
-  ].filter(Boolean) // Elimina valores undefined/null
-  : [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:4173"
-  ];
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "https://fronted-sga-roan.vercel.app", // Backup explícito
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:4173"
+].filter(Boolean);
 
 app.use(
   cors({
