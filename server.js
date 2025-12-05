@@ -43,15 +43,21 @@ const startServer = async () => {
 
     const server = http.createServer(app);
 
+    // Configuración de CORS para WebSocket
+    const allowedOrigins = process.env.NODE_ENV === 'production'
+      ? [
+        process.env.FRONTEND_URL,
+        // Agrega aquí otros dominios de frontend si los tienes
+      ].filter(Boolean) // Elimina valores undefined/null
+      : [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://localhost:4173'
+      ];
+
     const io = new Server(server, {
       cors: {
-        origin: process.env.NODE_ENV === 'production'
-          ? ['https://tudominio.com']
-          : [
-            'http://localhost:3000',
-            'http://localhost:5173',
-            'http://localhost:4173'
-          ],
+        origin: allowedOrigins,
         credentials: true
       }
     });

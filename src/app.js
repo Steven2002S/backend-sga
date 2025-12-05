@@ -49,16 +49,31 @@ app.use(
 // Compresión GZIP para todas las respuestas (reduce 70% el tamaño)
 app.use(compression());
 
+// Configuración de CORS dinámica
+const allowedOrigins = process.env.NODE_ENV === "production"
+  ? [
+    process.env.FRONTEND_URL,
+    // Agrega aquí otros dominios de frontend si los tienes
+  ].filter(Boolean) // Elimina valores undefined/null
+  : [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:4173"
+  ];
+
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? ["https://tudominio.com"]
-        : [
-          "http://localhost:3000",
-          "http://localhost:5173",
-          "http://localhost:4173"
-        ],
+    origin: (origin, callback) => {
+      // Permitir requests sin origin (como mobile apps o curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.warn(`CORS bloqueó origen no permitido: ${origin}`);
+        callback(new Error('No permitido por CORS'));
+      }
+    },
     credentials: true,
     exposedHeaders: ['X-Total-Count', 'X-Total-Activos', 'Content-Disposition'],
   }),
