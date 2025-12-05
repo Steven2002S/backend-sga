@@ -39,6 +39,11 @@ const sistemaRoutes = require('./routes/sistema.routes');
 
 const app = express();
 
+// Confiar en proxies (necesario para Railway, Heroku, etc.)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Middlewares de seguridad básica
 app.use(
   helmet({
