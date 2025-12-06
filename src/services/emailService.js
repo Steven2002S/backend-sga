@@ -5,17 +5,19 @@ const { getActiveAdmins } = require('../models/admins.model');
 // Con configuraciones anti-spam optimizadas
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // true para 465, false para otros puertos
+  port: 465,
+  secure: true, // true para 465 (SSL directo)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
   },
   tls: {
-    rejectUnauthorized: true,
+    rejectUnauthorized: false, // Permitir certificados en Railway
     minVersion: 'TLSv1.2'
   },
   debug: true, // Habilitar logs para diagnóstico
+  connectionTimeout: 10000, // 10 segundos timeout
+  greetingTimeout: 10000,
   // Configuraciones adicionales para evitar spam
   pool: true,
   maxConnections: 5,
