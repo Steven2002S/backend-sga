@@ -70,6 +70,11 @@ app.use(
       // Permitir requests sin origin (como mobile apps o curl)
       if (!origin) return callback(null, true);
 
+      // En producción, permitir el dominio principal y subdominios de Vercel
+      if (process.env.NODE_ENV === 'production' && origin.includes('.vercel.app')) {
+        return callback(null, true);
+      }
+
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
