@@ -3,17 +3,36 @@ const CalificacionesModel = require("../models/calificaciones.model");
 // GET /api/calificaciones/estudiante/curso/:id_curso - Obtener calificaciones de un estudiante en un curso
 async function getCalificacionesByEstudianteCurso(req, res) {
   try {
-    const { id_curso } = req.params;
+    const id_curso = req.params.id_curso || req.params.id; // Support both param names if needed
     const id_estudiante = req.user.id_usuario;
 
+    // 1. Obtener calificaciones raw
     const calificaciones = await CalificacionesModel.getByEstudianteCurso(
       id_estudiante,
       id_curso,
     );
 
+    // 2. Obtener desglose por módulos y promedio global (¡Ya calculado en Backend!)
+    const desglose = await CalificacionesModel.getDesglosePorModulos(
+      id_estudiante,
+      id_curso
+    );
+
+    const promedioData = await CalificacionesModel.getPromedioGlobalBalanceado(
+      id_estudiante,
+      id_curso
+    );
+
+    // 3. Estructurar respuesta completa
     return res.json({
       success: true,
-      calificaciones,
+      calificaciones, // Lista cruda de tareas
+      resumen: {
+        promedio_global: promedioData.promedio_global || 0,
+        peso_por_modulo: promedioData.peso_por_modulo,
+        total_modulos: promedioData.total_modulos,
+        desglose_modulos: desglose // Detalles por módulo ya calculados
+      }
     });
   } catch (error) {
     console.error("Error en getCalificacionesByEstudianteCurso:", error);

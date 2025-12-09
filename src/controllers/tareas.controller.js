@@ -8,16 +8,16 @@ async function getTareasByModulo(req, res) {
   try {
     const { id_modulo } = req.params;
     const { id_usuario, rol } = req.user;
-    
+
     // Si es estudiante, obtener su id_estudiante y pasar al modelo
     let id_estudiante = null;
     if (rol === 'estudiante') {
       const EstudiantesModel = require('../models/estudiantes.model');
       id_estudiante = await EstudiantesModel.getEstudianteIdByUserId(id_usuario);
     }
-    
+
     const tareas = await TareasModel.getAllByModulo(id_modulo, id_estudiante);
-    
+
     // Formatear las tareas para incluir la entrega si existe
     const tareasFormateadas = tareas.map(tarea => {
       const tareaBase = {
@@ -29,7 +29,7 @@ async function getTareasByModulo(req, res) {
         instrucciones: tarea.instrucciones,
         nota_maxima: tarea.nota_maxima,
         nota_minima_aprobacion: tarea.nota_minima_aprobacion,
-        ponderacion: rol === 'docente' ? tarea.ponderacion : undefined,
+        ponderacion: tarea.ponderacion,
         fecha_limite: tarea.fecha_limite,
         permite_archivo: tarea.permite_archivo,
         tamano_maximo_mb: tarea.tamano_maximo_mb,
@@ -41,7 +41,7 @@ async function getTareasByModulo(req, res) {
         total_entregas: tarea.total_entregas,
         entregas_calificadas: tarea.entregas_calificadas
       };
-      
+
       // Si hay entrega del estudiante, agregarla
       if (tarea.id_entrega) {
         tareaBase.entrega = {
@@ -57,10 +57,10 @@ async function getTareasByModulo(req, res) {
           calificador_apellidos: tarea.calificador_apellidos
         };
       }
-      
+
       return tareaBase;
     });
-    
+
     return res.json({
       success: true,
       tareas: tareasFormateadas
@@ -75,13 +75,13 @@ async function getTareasByModulo(req, res) {
 async function getTareaById(req, res) {
   try {
     const { id } = req.params;
-    
+
     const tarea = await TareasModel.getById(id);
-    
+
     if (!tarea) {
       return res.status(404).json({ error: 'Tarea no encontrada' });
     }
-    
+
     return res.json({
       success: true,
       tarea
@@ -116,7 +116,7 @@ async function createTarea(req, res) {
 
     // Obtener id_docente del usuario autenticado
     const id_docente = await DocentesModel.getDocenteIdByUserId(req.user.id_usuario);
-    
+
     if (!id_docente) {
       return res.status(403).json({ error: 'Usuario no es docente' });
     }
@@ -179,37 +179,37 @@ async function createTarea(req, res) {
     try {
       const ModulosModel = require('../models/modulos.model');
       const modulo = await ModulosModel.getById(id_modulo);
-      
+
       if (modulo && modulo.id_curso) {
         // Obtener estudiantes directamente desde la tabla matriculas
         const { pool } = require('../config/database');
-        
+
         // Obtener nombre del curso
         const [cursos] = await pool.execute(
           'SELECT nombre FROM cursos WHERE id_curso = ?',
           [modulo.id_curso]
         );
         const nombreCurso = cursos[0]?.nombre || 'tu curso';
-        
+
         const [estudiantes] = await pool.execute(`
           SELECT DISTINCT m.id_estudiante as id_usuario
           FROM matriculas m
           WHERE m.id_curso = ? AND m.estado = 'activa'
         `, [modulo.id_curso]);
-        
+
         console.log(`Estudiantes encontrados para notificar tarea en curso ${modulo.id_curso}:`, estudiantes);
-        
+
         // Obtener información del docente
         const [docenteInfo] = await pool.execute(`
           SELECT u.nombre, u.apellido 
           FROM usuarios u
           WHERE u.id_usuario = ?
         `, [req.user.id_usuario]);
-        
-        const nombreDocente = docenteInfo[0] 
-          ? `${docenteInfo[0].nombre} ${docenteInfo[0].apellido}` 
+
+        const nombreDocente = docenteInfo[0]
+          ? `${docenteInfo[0].nombre} ${docenteInfo[0].apellido}`
           : 'Docente';
-        
+
         const payloadTarea = {
           id_tarea,
           id_modulo,
@@ -220,7 +220,7 @@ async function createTarea(req, res) {
           curso_nombre: nombreCurso,
           docente_nombre: nombreDocente
         };
-        
+
         // Notificar al DOCENTE que creó la tarea (para que actualice su vista)
         // Usar setTimeout para dar tiempo a que la BD confirme la transacción
         setTimeout(() => {
@@ -228,15 +228,15 @@ async function createTarea(req, res) {
           emitToUser(req, req.user.id_usuario, 'nueva_tarea', payloadTarea);
           console.log(`Docente ${req.user.id_usuario} notificado de su nueva tarea`);
         }, 100);
-        
+
         if (estudiantes && estudiantes.length > 0) {
           const idsEstudiantes = estudiantes.map(e => e.id_usuario);
-          
+
           console.log(`Notificando nueva tarea a usuarios:`, idsEstudiantes);
-          
+
           // Notificar a todos los estudiantes del curso
           notificarNuevaTarea(req, idsEstudiantes, payloadTarea);
-          
+
           console.log(`Notificaciones de nueva tarea enviadas a ${idsEstudiantes.length} estudiantes`);
         } else {
           console.log(`No hay estudiantes matriculados en el curso ${modulo.id_curso}`);
@@ -278,7 +278,7 @@ async function updateTarea(req, res) {
 
     // Obtener id_docente del usuario autenticado
     const id_docente = await DocentesModel.getDocenteIdByUserId(req.user.id_usuario);
-    
+
     if (!id_docente) {
       return res.status(403).json({ error: 'Usuario no es docente' });
     }
@@ -370,7 +370,7 @@ async function deleteTarea(req, res) {
 
     // Obtener id_docente del usuario autenticado
     const id_docente = await DocentesModel.getDocenteIdByUserId(req.user.id_usuario);
-    
+
     if (!id_docente) {
       return res.status(403).json({ error: 'Usuario no es docente' });
     }
@@ -383,7 +383,7 @@ async function deleteTarea(req, res) {
 
     // Obtener información de la tarea antes de eliminar
     const tareaAnterior = await TareasModel.getById(id);
-    
+
     if (!tareaAnterior) {
       return res.status(404).json({ error: 'Tarea no encontrada' });
     }
@@ -440,9 +440,9 @@ async function deleteTarea(req, res) {
 async function getTareaStats(req, res) {
   try {
     const { id } = req.params;
-    
+
     const stats = await TareasModel.getStats(id);
-    
+
     return res.json({
       success: true,
       stats
@@ -458,9 +458,9 @@ async function getTareasByEstudiante(req, res) {
   try {
     const { id_curso } = req.params;
     const id_estudiante = req.user.id_usuario;
-    
+
     const tareas = await TareasModel.getTareasByEstudiante(id_estudiante, id_curso);
-    
+
     return res.json({
       success: true,
       tareas
