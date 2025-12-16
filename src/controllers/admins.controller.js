@@ -11,6 +11,7 @@ const {
   getUserById,
 } = require('../models/usuarios.model');
 const cloudinaryService = require('../services/cloudinary.service');
+const emailService = require('../services/emailService');
 
 async function createAdminController(req, res) {
   try {
@@ -73,8 +74,12 @@ async function createAdminController(req, res) {
       foto_perfil_url: fotoPerfilUrl,
       foto_perfil_public_id: fotoPerfilPublicId,
       passwordHash: hash,
+      password_temporal: password, // Flag para cambio de contraseña
       id_rol: role.id_rol
     });
+
+    // Enviar credenciales por correo
+    await emailService.sendCredentialsEmail(email, password, nombre);
 
     return res.status(201).json({
       id_usuario: user.id_usuario,

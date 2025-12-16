@@ -720,6 +720,101 @@ async function enviarComprobantePagoMensual(estudiante, pago, pdfBuffer) {
 }
 
 /**
+ * Enviar credenciales de acceso a un nuevo administrativo
+ */
+async function sendCredentialsEmail(email, password, nombre) {
+  try {
+    const mailOptions = {
+      from: `"${process.env.EMAIL_FROM_NAME || 'Escuela Jessica Vélez'}" <${process.env.EMAIL_USER}>`,
+      to: email,
+      replyTo: process.env.EMAIL_USER,
+      subject: '🔐 Credenciales de Acceso - Equipo Administrativo',
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        'Importance': 'high',
+        'X-Mailer': 'Escuela Jessica Vélez - SGA',
+      },
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); padding: 30px; text-align: center; color: white; }
+            .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+            .content { padding: 30px; }
+            .welcome-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; border-radius: 4px; margin-bottom: 25px; }
+            .credentials { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 25px 0; }
+            .credential-item { margin-bottom: 15px; }
+            .credential-item:last-child { margin-bottom: 0; }
+            .label { font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+            .value { font-size: 18px; color: #0f172a; font-family: 'Courier New', monospace; font-weight: 700; background: white; padding: 8px 12px; border-radius: 4px; border: 1px solid #cbd5e1; display: inline-block; }
+            .alert { background: #fff7ed; border-left: 4px solid #f97316; padding: 15px; border-radius: 4px; margin: 25px 0; color: #9a3412; font-size: 14px; line-height: 1.5; }
+            .button { display: inline-block; background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; text-align: center; }
+            .footer { background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔐 Credenciales de Acceso</h1>
+              <p style="margin: 5px 0 0 0; opacity: 0.9;">Sistema de Gestión Académica</p>
+            </div>
+            
+            <div class="content">
+              <div class="welcome-box">
+                <h2 style="color: #1e3a8a; margin: 0 0 10px 0; font-size: 18px;">¡Bienvenido/a al equipo, ${nombre}!</h2>
+                <p style="color: #334155; margin: 0; line-height: 1.5;">
+                  Se ha creado tu cuenta administrativa en el sistema. A continuación encontrarás tus credenciales temporales para acceder.
+                </p>
+              </div>
+
+              <div class="credentials">
+                <div class="credential-item">
+                  <span class="label">Usuario / Email</span>
+                  <div class="value">${email}</div>
+                </div>
+                <div class="credential-item">
+                  <span class="label">Contraseña Temporal</span>
+                  <div class="value">${password}</div>
+                </div>
+              </div>
+
+              <div class="alert">
+                <strong>⚠️ Importante:</strong> Por motivos de seguridad, el sistema te solicitará cambiar esta contraseña temporal inmediatamente después de tu primer inicio de sesión.
+              </div>
+
+              <div style="text-align: center; margin-top: 30px;">
+                <a href="${process.env.FRONTEND_URL}/login" class="button">
+                  Acceder al Panel Administrativo
+                </a>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p><strong>Escuela Jessica Vélez</strong></p>
+              <p>Departamento de Tecnología</p>
+              <p style="margin-top: 10px;">Por favor no compartas estas credenciales con nadie.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email de credenciales enviado a:', email);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error enviando credenciales:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Enviar notificación al admin cuando un estudiante sube un pago mensual
  */
 async function enviarNotificacionPagoEstudiante(datosPago) {
@@ -1548,9 +1643,9 @@ module.exports = {
   enviarEmailBienvenidaDocente,
   enviarComprobantePagoMensual,
   enviarNotificacionPagoEstudiante,
+  sendCredentialsEmail,
   enviarNotificacionBloqueoCuenta,
   enviarNotificacionDesbloqueoTemporal,
   enviarConfirmacionMatricula,
   enviarReporteFinancieroAutomatico
 };
-

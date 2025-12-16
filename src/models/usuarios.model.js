@@ -167,11 +167,11 @@ async function createRole(nombre_rol, descripcion = null) {
   return role;
 }
 
-async function createAdminUser({ cedula, nombre, apellido, email, telefono, fecha_nacimiento, direccion, genero, foto_perfil_url, foto_perfil_public_id, passwordHash, id_rol }) {
+async function createAdminUser({ cedula, nombre, apellido, email, telefono, fecha_nacimiento, direccion, genero, foto_perfil_url, foto_perfil_public_id, passwordHash, password_temporal, id_rol }) {
   const [result] = await pool.execute(
     `INSERT INTO usuarios (
-      cedula, nombre, apellido, email, telefono, fecha_nacimiento, direccion, genero, foto_perfil_url, foto_perfil_public_id, password, id_rol, estado
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activo')`,
+      cedula, nombre, apellido, email, telefono, fecha_nacimiento, direccion, genero, foto_perfil_url, foto_perfil_public_id, password, password_temporal, needs_password_reset, id_rol, estado
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?, 'activo')`,
     [
       cedula,
       nombre,
@@ -184,6 +184,7 @@ async function createAdminUser({ cedula, nombre, apellido, email, telefono, fech
       foto_perfil_url || null,
       foto_perfil_public_id || null,
       passwordHash,
+      password_temporal || null,
       id_rol
     ]
   );
