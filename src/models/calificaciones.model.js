@@ -113,19 +113,21 @@ class CalificacionesModel {
         t.titulo as tarea_titulo,
         t.nota_maxima,
         t.ponderacion,
+        t.fecha_limite,
         m.id_modulo,
         m.nombre as modulo_nombre,
         m.id_modulo as modulo_orden,
         m.promedios_publicados,
         e.fecha_entrega,
+        e.id_entrega as entrega_id,
         d.nombres as docente_nombres,
         d.apellidos as docente_apellidos
-      FROM calificaciones_tareas c
-      INNER JOIN entregas_tareas e ON c.id_entrega = e.id_entrega
-      INNER JOIN tareas_modulo t ON e.id_tarea = t.id_tarea
-      INNER JOIN modulos_curso m ON t.id_modulo = m.id_modulo
-      INNER JOIN docentes d ON c.calificado_por = d.id_docente
-      WHERE e.id_estudiante = ? AND m.id_curso = ?
+      FROM modulos_curso m
+      INNER JOIN tareas_modulo t ON m.id_modulo = t.id_modulo
+      LEFT JOIN entregas_tareas e ON t.id_tarea = e.id_tarea AND e.id_estudiante = ?
+      LEFT JOIN calificaciones_tareas c ON e.id_entrega = c.id_entrega
+      LEFT JOIN docentes d ON c.calificado_por = d.id_docente
+      WHERE m.id_curso = ?
       ORDER BY m.id_modulo ASC, t.fecha_limite ASC
     `,
       [id_estudiante, id_curso],
