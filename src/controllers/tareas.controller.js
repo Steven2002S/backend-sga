@@ -24,6 +24,9 @@ async function getTareasByModulo(req, res) {
         id_tarea: tarea.id_tarea,
         id_modulo: tarea.id_modulo,
         id_docente: tarea.id_docente,
+        id_categoria: tarea.id_categoria, // Ensuring id_categoria is also passed if needed
+        categoria_nombre: tarea.categoria_nombre,
+        categoria_ponderacion: tarea.categoria_ponderacion,
         titulo: tarea.titulo,
         descripcion: tarea.descripcion,
         instrucciones: tarea.instrucciones,
@@ -97,6 +100,7 @@ async function createTarea(req, res) {
   try {
     const {
       id_modulo,
+      id_categoria,
       titulo,
       descripcion,
       instrucciones,
@@ -124,6 +128,7 @@ async function createTarea(req, res) {
     const id_tarea = await TareasModel.create({
       id_modulo,
       id_docente,
+      id_categoria,
       titulo,
       descripcion,
       instrucciones,
@@ -162,6 +167,7 @@ async function createTarea(req, res) {
       datos_nuevos: {
         titulo: tarea?.titulo || titulo,
         id_modulo: tarea?.id_modulo || id_modulo,
+        id_categoria: tarea?.id_categoria || id_categoria,
         nombre_modulo: tarea?.modulo || null,
         descripcion: tarea?.descripcion || descripcion,
         nota_maxima: tarea?.nota_maxima || nota_maxima,
@@ -213,6 +219,7 @@ async function createTarea(req, res) {
         const payloadTarea = {
           id_tarea,
           id_modulo,
+          id_categoria,
           titulo,
           descripcion,
           fecha_entrega: fecha_limite,
@@ -263,6 +270,7 @@ async function updateTarea(req, res) {
   try {
     const { id } = req.params;
     const {
+      id_categoria,
       titulo,
       descripcion,
       instrucciones,
@@ -290,6 +298,7 @@ async function updateTarea(req, res) {
     }
 
     const updated = await TareasModel.update(id, {
+      id_categoria,
       titulo,
       descripcion,
       instrucciones,
@@ -338,6 +347,7 @@ async function updateTarea(req, res) {
             id_tarea: parseInt(id),
             titulo: tarea.titulo || titulo,
             id_modulo: tarea.id_modulo,
+            id_categoria: tarea.id_categoria || id_categoria,
             id_curso: moduloInfo[0].id_curso,
             curso_nombre: moduloInfo[0].curso_nombre,
             nota_maxima: tarea.nota_maxima || nota_maxima,

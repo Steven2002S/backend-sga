@@ -34,61 +34,75 @@ class PagosMenualesModel {
 
   // Obtener cuotas de una matrícula específica
   static async getCuotasByMatricula(id_matricula, id_estudiante) {
-    console.log('Model getCuotasByMatricula - Verificando matrícula:', {
-      id_matricula,
-      id_estudiante
-    });
+    try {
+      console.log('Model getCuotasByMatricula - Verificando matrícula:', {
+        id_matricula,
+        id_estudiante
+      });
 
-    // Verificar que la matrícula pertenece al estudiante
-    const [verificacion] = await pool.execute(`
-      SELECT m.id_matricula, m.id_estudiante
-      FROM matriculas m 
-      WHERE m.id_matricula = ? AND m.id_estudiante = ?
-    `, [id_matricula, id_estudiante]);
+      // Verificar que la matrícula pertenece al estudiante
+      const [verificacion] = await pool.execute(`
+        SELECT m.id_matricula, m.id_estudiante
+        FROM matriculas m 
+        WHERE m.id_matricula = ? AND m.id_estudiante = ?
+      `, [id_matricula, id_estudiante]);
 
-    console.log('Resultado de verificación:', verificacion);
+      console.log('Resultado de verificación:', verificacion);
 
-    if (verificacion.length === 0) {
-      // Intentar encontrar la matrícula sin importar el estudiante para debugging
-      const [matriculaInfo] = await pool.execute(`
-        SELECT m.id_matricula, m.id_estudiante, m.codigo_matricula,
-               u.nombres, u.apellidos
-        FROM matriculas m
-        LEFT JOIN usuarios u ON m.id_estudiante = u.id_usuario
-        WHERE m.id_matricula = ?
+      if (verificacion.length === 0) {
+        // Intentar encontrar la matrícula sin importar el estudiante para debugging
+        const [matriculaInfo] = await pool.execute(`
+          SELECT m.id_matricula, m.id_estudiante, m.codigo_matricula,
+                 u.nombre, u.apellido
+          FROM matriculas m
+          LEFT JOIN usuarios u ON m.id_estudiante = u.id_usuario
+          WHERE m.id_matricula = ?
+        `, [id_matricula]);
+
+        console.log('Matrícula encontrada pero con diferente estudiante:', matriculaInfo);
+
+        throw new Error(`Matrícula no encontrada o no pertenece al estudiante. Matrícula: ${id_matricula}, Estudiante: ${id_estudiante}`);
+      }
+
+      const [cuotas] = await pool.execute(`
+        SELECT 
+          pm.id_pago,
+          pm.numero_cuota,
+          pm.monto,
+          pm.fecha_vencimiento,
+          pm.fecha_pago,
+          pm.numero_comprobante,
+          pm.recibido_por,
+          pm.estado,
+          pm.observaciones,
+          c.nombre as curso_nombre,
+          tc.nombre as tipo_curso_nombre,
+          tc.modalidad_pago,
+          tc.numero_clases,
+          tc.precio_por_clase,
+          tc.duracion_meses as meses_duracion
+        FROM pagos_mensuales pm
+        INNER JOIN matriculas m ON pm.id_matricula = m.id_matricula
+        INNER JOIN cursos c ON m.id_curso = c.id_curso
+        INNER JOIN tipos_cursos tc ON c.id_tipo_curso = tc.id_tipo_curso
+        WHERE pm.id_matricula = ?
+        ORDER BY pm.numero_cuota ASC
       `, [id_matricula]);
 
-      console.log('Matrícula encontrada pero con diferente estudiante:', matriculaInfo);
-
-      throw new Error(`Matrícula no encontrada o no pertenece al estudiante. Matrícula: ${id_matricula}, Estudiante: ${id_estudiante}`);
+      console.log(`✅ Cuotas obtenidas para matrícula ${id_matricula}:`, cuotas.length);
+      return cuotas;
+    } catch (error) {
+      console.error('❌ Error en getCuotasByMatricula:', {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        sqlMessage: error.sqlMessage,
+        sql: error.sql,
+        id_matricula,
+        id_estudiante
+      });
+      throw error;
     }
-
-    const [cuotas] = await pool.execute(`
-      SELECT 
-        pm.id_pago,
-        pm.numero_cuota,
-        pm.monto,
-        pm.fecha_vencimiento,
-        pm.fecha_pago,
-        pm.numero_comprobante,
-        pm.recibido_por,
-        pm.estado,
-        pm.observaciones,
-        c.nombre as curso_nombre,
-        tc.nombre as tipo_curso_nombre,
-        tc.modalidad_pago,
-        tc.numero_clases,
-        tc.precio_por_clase,
-        tc.duracion_meses as meses_duracion
-      FROM pagos_mensuales pm
-      INNER JOIN matriculas m ON pm.id_matricula = m.id_matricula
-      INNER JOIN cursos c ON m.id_curso = c.id_curso
-      INNER JOIN tipos_cursos tc ON c.id_tipo_curso = tc.id_tipo_curso
-      WHERE pm.id_matricula = ?
-      ORDER BY pm.numero_cuota ASC
-    `, [id_matricula]);
-
-    return cuotas;
   }
 
   // Obtener información de un pago específico

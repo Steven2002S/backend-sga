@@ -10,9 +10,15 @@ async function getModulosByCurso(req, res) {
 
     const modulos = await ModulosModel.getAllByCurso(id_curso);
 
+    // Ensure 'categorias' is parsed if it comes as a string from MySQL
+    const modulosParsed = modulos.map(m => ({
+      ...m,
+      categorias: typeof m.categorias === 'string' ? JSON.parse(m.categorias) : (m.categorias || [])
+    }));
+
     return res.json({
       success: true,
-      modulos,
+      modulos: modulosParsed,
     });
   } catch (error) {
     console.error("Error en getModulosByCurso:", error);
@@ -45,10 +51,24 @@ async function getModuloById(req, res) {
 
 async function createModulo(req, res) {
   try {
-    const { id_curso, nombre, descripcion, fecha_inicio, fecha_fin } = req.body;
+    const { id_curso, nombre, descripcion, fecha_inicio, fecha_fin, categorias } = req.body;
 
     if (!id_curso || !nombre) {
       return res.status(400).json({ error: "Curso y nombre son obligatorios" });
+    }
+
+    // Validar categorías
+    if (categorias) {
+      if (!Array.isArray(categorias) || categorias.length === 0) {
+        return res.status(400).json({ error: "Las categorías deben ser un arreglo y no estar vacías" });
+      }
+
+      const totalPonderacion = categorias.reduce((sum, cat) => sum + parseFloat(cat.ponderacion || 0), 0);
+
+      // Permitir un pequeño margen de error por flotantes, pero idealmente ser estricto
+      if (Math.abs(totalPonderacion - 10) > 0.1) {
+        return res.status(400).json({ error: `La suma de las ponderaciones debe ser 10. Actual: ${totalPonderacion}` });
+      }
     }
 
     const id_docente = await DocentesModel.getDocenteIdByUserId(
@@ -66,6 +86,7 @@ async function createModulo(req, res) {
       descripcion,
       fecha_inicio,
       fecha_fin,
+      categorias
     });
 
     const modulo = await ModulosModel.getById(id_modulo);
@@ -169,7 +190,7 @@ async function createModulo(req, res) {
 async function updateModulo(req, res) {
   try {
     const { id } = req.params;
-    const { nombre, descripcion, fecha_inicio, fecha_fin, estado } = req.body;
+    const { nombre, descripcion, fecha_inicio, fecha_fin, estado, categorias } = req.body;
 
     // Obtener id_docente del usuario autenticado
     const id_docente = await DocentesModel.getDocenteIdByUserId(
@@ -193,9 +214,26 @@ async function updateModulo(req, res) {
 
     // Obtener módulo anterior antes de actualizar
     const moduloAnterior = await ModulosModel.getById(id);
-    
+
     if (!moduloAnterior) {
       return res.status(404).json({ error: "Módulo no encontrado" });
+    }
+
+    // Validar categorías si se proporcionaron
+    if (categorias !== undefined) {
+      if (!Array.isArray(categorias)) {
+        return res.status(400).json({ error: 'Las categorías deben ser un array' });
+      }
+
+      if (categorias.length > 0) {
+        // Validar que la suma de ponderaciones sea 10
+        const sumaPonderaciones = categorias.reduce((sum, cat) => sum + parseFloat(cat.ponderacion || 0), 0);
+        if (Math.abs(sumaPonderaciones - 10) > 0.01) {
+          return res.status(400).json({
+            error: `La suma de las ponderaciones debe ser 10. Suma actual: ${sumaPonderaciones}`
+          });
+        }
+      }
     }
 
     const updated = await ModulosModel.update(id, {
@@ -204,6 +242,7 @@ async function updateModulo(req, res) {
       fecha_inicio,
       fecha_fin,
       estado,
+      categorias
     });
 
     if (!updated) {
@@ -474,7 +513,7 @@ async function deleteModulo(req, res) {
 
     // Obtener información del módulo antes de eliminar
     const moduloAnterior = await ModulosModel.getById(id);
-    
+
     if (!moduloAnterior) {
       return res.status(404).json({ error: "Módulo no encontrado" });
     }

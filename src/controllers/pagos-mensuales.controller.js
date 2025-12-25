@@ -29,13 +29,19 @@ exports.getCuotasByMatricula = async (req, res) => {
     res.json(cuotas);
 
   } catch (error) {
-    console.error('Error obteniendo cuotas:', {
+    console.error('❌ Error obteniendo cuotas:', {
       message: error.message,
+      stack: error.stack,
+      code: error.code,
+      errno: error.errno,
+      sqlMessage: error.sqlMessage,
+      sql: error.sql,
       id_matricula: req.params.id_matricula,
       id_estudiante: req.user?.id_usuario
     });
     res.status(500).json({
-      error: error.message || 'Error interno del servidor'
+      error: error.message || 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.sqlMessage : undefined
     });
   }
 };
@@ -421,7 +427,7 @@ exports.generarReporteExcel = async (req, res) => {
   try {
     // Obtener filtros de la query
     const { estado = '', horario = '', cursoId = '', search = '' } = req.query;
-    
+
     // 1. Obtener todos los pagos con información completa
     // IMPORTANTE: Ordenar por Estudiante -> Curso -> Cuota para poder agrupar (merge) en Excel
     let sql = `
@@ -458,32 +464,32 @@ exports.generarReporteExcel = async (req, res) => {
       LEFT JOIN roles r ON r.id_rol = verificador.id_rol
       WHERE 1=1
     `;
-    
+
     const params = [];
-    
+
     if (estado) {
       sql += ` AND pm.estado = ?`;
       params.push(estado);
     }
-    
+
     if (horario) {
       sql += ` AND c.horario = ?`;
       params.push(horario);
     }
-    
+
     if (cursoId) {
       sql += ` AND c.id_curso = ?`;
       params.push(parseInt(cursoId));
     }
-    
+
     if (search) {
       sql += ` AND (u_est.nombre LIKE ? OR u_est.apellido LIKE ? OR u_est.cedula LIKE ? OR c.nombre LIKE ?)`;
       const searchParam = `%${search}%`;
       params.push(searchParam, searchParam, searchParam, searchParam);
     }
-    
+
     sql += ` ORDER BY u_est.apellido, u_est.nombre, c.nombre, pm.numero_cuota ASC`;
-    
+
     const [pagos] = await pool.execute(sql, params);
 
     // 2. Obtener estadísticas generales

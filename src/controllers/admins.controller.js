@@ -9,6 +9,7 @@ const {
   updateAdminUser,
   updateUserPassword,
   getUserById,
+  resetUserPassword,
 } = require('../models/usuarios.model');
 const cloudinaryService = require('../services/cloudinary.service');
 const emailService = require('../services/emailService');
@@ -236,7 +237,7 @@ async function updateAdminController(req, res) {
 async function updateAdminPasswordController(req, res) {
   try {
     const { id } = req.params;
-    const { password } = req.body || {};
+    const { password, reset } = req.body || {}; // reset: true para "Olvidé contraseña"
     const id_usuario = Number(id);
     if (!id_usuario) return res.status(400).json({ error: 'ID inválido' });
     if (!password || String(password).length < 6) return res.status(400).json({ error: 'Password inválido' });
@@ -245,7 +246,23 @@ async function updateAdminPasswordController(req, res) {
     if (!current) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     const hash = await bcrypt.hash(password, 10);
-    await updateUserPassword(id_usuario, hash);
+
+    if (reset) {
+      // Si es un reset, usamos resetUserPassword para marcarlo como temporal y forzar cambio
+      await resetUserPassword(id_usuario, password, hash);
+
+      // Enviar email con las nuevas credenciales
+      try {
+        await emailService.sendCredentialsEmail(current.email, password, current.nombre);
+      } catch (emailError) {
+        console.error('Error enviando email de credenciales reset:', emailError);
+        // No fallamos el request si el email falla, pero lo logueamos
+      }
+    } else {
+      // Cambio normal de contraseña
+      await updateUserPassword(id_usuario, hash);
+    }
+
     return res.json({ ok: true });
   } catch (err) {
     console.error('Error actualizando contraseña:', err);

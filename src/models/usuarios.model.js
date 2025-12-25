@@ -330,6 +330,11 @@ async function getAdminStats() {
   const [studentRows] = await pool.execute(
     `SELECT COUNT(*) as total FROM usuarios u 
      JOIN roles r ON r.id_rol = u.id_rol 
+     WHERE r.nombre_rol = 'estudiante'`
+  );
+  const [activeStudentRows] = await pool.execute(
+    `SELECT COUNT(*) as total FROM usuarios u 
+     JOIN roles r ON r.id_rol = u.id_rol 
      WHERE r.nombre_rol = 'estudiante' AND u.estado = "activo"`
   );
   const [docenteRows] = await pool.execute(
@@ -396,12 +401,13 @@ async function getAdminStats() {
   return {
     totalAdministradores: adminRows[0].total,
     totalEstudiantes: studentRows[0].total,
+    estudiantesActivos: activeStudentRows[0].total,
     totalDocentes: docenteRows[0].total,
     cursosActivos: cursosRows[0].total,
     matriculasAceptadas: matriculasAceptadas[0].total,
     matriculasPendientes: matriculasPendientes[0].total,
     porcentajeAdministradores: calcularPorcentaje(adminRows[0].total, adminMesAnterior[0].total),
-    porcentajeEstudiantes: calcularPorcentaje(studentRows[0].total, studentMesAnterior[0].total),
+    porcentajeEstudiantes: calcularPorcentaje(activeStudentRows[0].total, studentMesAnterior[0].total),
     porcentajeDocentes: calcularPorcentaje(docenteRows[0].total, docenteMesAnterior[0].total),
     porcentajeCursos: calcularPorcentaje(cursosRows[0].total, cursosMesAnterior[0].total),
     porcentajeMatriculasAceptadas: calcularPorcentaje(matriculasAceptadas[0].total, matriculasAceptadasMesAnterior[0].total),

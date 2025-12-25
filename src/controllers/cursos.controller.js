@@ -274,10 +274,10 @@ async function deleteCursoController(req, res) {
   try {
     const id = Number(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID inválido' });
-    
+
     // Obtener información del curso antes de eliminar
     const cursoAnterior = await getCursoById(id);
-    
+
     if (!cursoAnterior) {
       return res.status(404).json({ error: 'Curso no encontrado' });
     }
@@ -360,9 +360,12 @@ module.exports = {
           t.fecha_limite,
           m.id_modulo,
           m.nombre AS modulo_nombre,
-          m.id_modulo AS modulo_orden
+          m.id_modulo AS modulo_orden,
+          cat.nombre AS categoria_nombre,
+          cat.ponderacion AS categoria_ponderacion
         FROM modulos_curso m
         INNER JOIN tareas_modulo t ON m.id_modulo = t.id_modulo
+        LEFT JOIN categorias_evaluacion cat ON t.id_categoria = cat.id_categoria
         WHERE m.id_curso = ? AND t.estado = 'activo'
         ORDER BY m.id_modulo ASC, t.fecha_limite ASC
       `, [id]);

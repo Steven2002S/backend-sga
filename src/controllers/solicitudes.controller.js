@@ -675,7 +675,8 @@ exports.createSolicitud = async (req, res) => {
             email: email_solicitante
           });
 
-          // Contar matrículas pendientes totales
+          // Contar matrículas pendientes totales - ELIMINADO para evitar duplicidad de notificaciones
+          /*
           const [pendientes] = await pool.query(
             'SELECT COUNT(*) as total FROM solicitudes_matricula WHERE estado = ?',
             ['pendiente']
@@ -684,6 +685,7 @@ exports.createSolicitud = async (req, res) => {
           if (pendientes[0].total > 0) {
             notificarMatriculasPendientes(req, pendientes[0].total);
           }
+          */
         } catch (wsError) {
           console.error(' Error enviando notificación WebSocket (no afecta la solicitud):', wsError);
         }

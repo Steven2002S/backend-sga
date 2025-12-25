@@ -6,6 +6,8 @@ class TareasModel {
     let query = `
       SELECT 
         t.*,
+        c_eval.nombre as categoria_nombre,
+        c_eval.ponderacion as categoria_ponderacion,
         d.nombres as docente_nombres,
         d.apellidos as docente_apellidos,
         (SELECT COUNT(*) FROM entregas_tareas WHERE id_tarea = t.id_tarea) as total_entregas,
@@ -30,7 +32,8 @@ class TareasModel {
 
     query += `
       FROM tareas_modulo t
-      INNER JOIN docentes d ON t.id_docente = d.id_docente`;
+      INNER JOIN docentes d ON t.id_docente = d.id_docente
+      LEFT JOIN categorias_evaluacion c_eval ON t.id_categoria = c_eval.id_categoria`;
 
     if (id_estudiante) {
       query += `
@@ -68,6 +71,7 @@ class TareasModel {
       INNER JOIN modulos_curso m ON t.id_modulo = m.id_modulo
       INNER JOIN cursos c ON m.id_curso = c.id_curso
       INNER JOIN docentes d ON t.id_docente = d.id_docente
+      LEFT JOIN categorias_evaluacion c_eval ON t.id_categoria = c_eval.id_categoria
       WHERE t.id_tarea = ?
     `, [id_tarea]);
 
@@ -79,6 +83,7 @@ class TareasModel {
     const {
       id_modulo,
       id_docente,
+      id_categoria,
       titulo,
       descripcion,
       instrucciones,
@@ -94,13 +99,14 @@ class TareasModel {
 
     const [result] = await pool.execute(`
       INSERT INTO tareas_modulo (
-        id_modulo, id_docente, titulo, descripcion, instrucciones,
+        id_modulo, id_docente, id_categoria, titulo, descripcion, instrucciones,
         nota_maxima, nota_minima_aprobacion, ponderacion, fecha_limite,
         permite_archivo, tamano_maximo_mb, formatos_permitidos, estado
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id_modulo,
       id_docente,
+      id_categoria || null,
       titulo.trim(),
       descripcion ? descripcion.trim() : null,
       instrucciones ? instrucciones.trim() : null,
@@ -120,6 +126,7 @@ class TareasModel {
   // Actualizar tarea
   static async update(id_tarea, tareaData) {
     const {
+      id_categoria,
       titulo,
       descripcion,
       instrucciones,
@@ -135,7 +142,8 @@ class TareasModel {
 
     const [result] = await pool.execute(`
       UPDATE tareas_modulo 
-      SET titulo = ?, 
+      SET id_categoria = ?,
+          titulo = ?, 
           descripcion = ?, 
           instrucciones = ?,
           nota_maxima = ?,
@@ -148,6 +156,7 @@ class TareasModel {
           estado = ?
       WHERE id_tarea = ?
     `, [
+      id_categoria || null,
       titulo.trim(),
       descripcion ? descripcion.trim() : null,
       instrucciones ? instrucciones.trim() : null,
@@ -210,6 +219,7 @@ class TareasModel {
       INNER JOIN modulos_curso m ON t.id_modulo = m.id_modulo
       INNER JOIN cursos c ON m.id_curso = c.id_curso
       INNER JOIN docentes d ON t.id_docente = d.id_docente
+      LEFT JOIN categorias_evaluacion c_eval ON t.id_categoria = c_eval.id_categoria
       LEFT JOIN entregas_tareas e ON t.id_tarea = e.id_tarea AND e.id_estudiante = ?
       LEFT JOIN calificaciones_tareas cal ON e.id_entrega = cal.id_entrega
       WHERE m.id_curso = ? AND t.estado = 'activo'

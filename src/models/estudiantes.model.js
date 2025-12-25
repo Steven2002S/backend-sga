@@ -630,14 +630,34 @@ class EstudiantesModel {
           LEFT JOIN entregas_tareas e ON t.id_tarea = e.id_tarea AND e.id_estudiante = m.id_estudiante
           LEFT JOIN calificaciones_tareas cal ON e.id_entrega = cal.id_entrega
           WHERE mc.id_curso = c.id_curso), 0) as progreso,
-        -- Calcular calificación real basada en promedio de calificaciones
+        -- Calcular calificación real basada en promedio GLOBAL PONDERADO
         COALESCE(
-          (SELECT ROUND(AVG(cal.nota), 2)
-          FROM modulos_curso mc
-          INNER JOIN tareas_modulo t ON mc.id_modulo = t.id_modulo
-          INNER JOIN entregas_tareas e ON t.id_tarea = e.id_tarea AND e.id_estudiante = m.id_estudiante
-          INNER JOIN calificaciones_tareas cal ON e.id_entrega = cal.id_entrega
-          WHERE mc.id_curso = c.id_curso AND cal.nota IS NOT NULL), 
+          (SELECT 
+            ROUND(SUM(promedio_modulo) / COUNT(DISTINCT id_modulo), 2) as promedio_global
+          FROM (
+            SELECT 
+              mc2.id_modulo as id_modulo,
+              SUM(
+                CASE
+                  WHEN t.id_categoria IS NOT NULL THEN
+                    (COALESCE(cal.nota, 0) / t.nota_maxima) * 
+                    (cat.ponderacion / (
+                      SELECT COUNT(*) 
+                      FROM tareas_modulo t2 
+                      WHERE t2.id_categoria = t.id_categoria
+                    ))
+                  ELSE
+                    (COALESCE(cal.nota, 0) / t.nota_maxima) * t.ponderacion
+                END
+              ) as promedio_modulo
+            FROM modulos_curso mc2
+            INNER JOIN tareas_modulo t ON mc2.id_modulo = t.id_modulo
+            LEFT JOIN categorias_evaluacion cat ON t.id_categoria = cat.id_categoria
+            LEFT JOIN entregas_tareas e ON t.id_tarea = e.id_tarea AND e.id_estudiante = m.id_estudiante
+            LEFT JOIN calificaciones_tareas cal ON e.id_entrega = cal.id_entrega
+            WHERE mc2.id_curso = c.id_curso
+            GROUP BY mc2.id_modulo
+          ) AS promedios_modulos), 
           NULL) as calificacion_final,
         -- Calcular tareas pendientes reales
         COALESCE(
