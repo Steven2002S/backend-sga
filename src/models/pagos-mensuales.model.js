@@ -371,9 +371,9 @@ class PagosMenualesModel {
         SELECT 
           m.id_matricula,
           m.codigo_matricula,
-          c.nombre as curso_nombre,
-          c.codigo_curso,
-          tc.nombre as tipo_curso_nombre,
+          COALESCE(c.nombre, 'Curso Sin Nombre') as curso_nombre,
+          COALESCE(c.codigo_curso, 'S/C') as codigo_curso,
+          COALESCE(tc.nombre, 'Tipo No Esp.') as tipo_curso_nombre,
           COALESCE(COUNT(pm.id_pago), 0) as total_cuotas,
           COALESCE(SUM(CASE WHEN pm.estado = 'pendiente' THEN 1 ELSE 0 END), 0) as cuotas_pendientes,
           COALESCE(SUM(CASE WHEN pm.estado = 'vencido' THEN 1 ELSE 0 END), 0) as cuotas_vencidas,
@@ -394,12 +394,12 @@ class PagosMenualesModel {
             ELSE 0
           END as es_curso_promocional
         FROM matriculas m
-        INNER JOIN cursos c ON m.id_curso = c.id_curso
-        INNER JOIN tipos_cursos tc ON c.id_tipo_curso = tc.id_tipo_curso
+        LEFT JOIN cursos c ON m.id_curso = c.id_curso
+        LEFT JOIN tipos_cursos tc ON c.id_tipo_curso = tc.id_tipo_curso
         LEFT JOIN pagos_mensuales pm ON m.id_matricula = pm.id_matricula
         LEFT JOIN estudiante_promocion ep ON m.id_matricula = ep.id_matricula
         LEFT JOIN promociones p ON ep.id_promocion = p.id_promocion
-        WHERE m.id_estudiante = ? AND m.estado = 'activa'
+        WHERE m.id_estudiante = ?
         GROUP BY m.id_matricula, m.codigo_matricula, c.nombre, c.codigo_curso, tc.nombre, 
                  m.monto_matricula, ep.id_estudiante_promocion, ep.id_promocion, 
                  ep.meses_gratis_aplicados, ep.fecha_inicio_cobro, p.nombre_promocion, 
